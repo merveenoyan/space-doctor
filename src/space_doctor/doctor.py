@@ -33,6 +33,8 @@ class RunConfig:
     hf_job_flavor: str = "cpu-basic"
     dry_run_uploads: bool = True
     dry_run_bucket: bool = False
+    fetch_space_logs: bool = True
+    space_logs_tail: int = 500
 
 
 def run_doctor(config: RunConfig) -> DoctorResult:
@@ -45,6 +47,9 @@ def run_doctor(config: RunConfig) -> DoctorResult:
     commands: list[CommandResult] = []
     source_dir, inspect_commands = prepare_workspace(config, paths, trace)
     commands.extend(inspect_commands)
+
+    if config.space_id and config.fetch_space_logs:
+        commands.extend(fetch_space_logs(config, paths, trace))
 
     compile_result = run_command(["python3", "-m", "py_compile", str(source_dir / "app.py")], timeout=20)
     commands.append(compile_result)
@@ -173,6 +178,48 @@ def prepare_workspace(
     write_command_log(paths.logs / "hf_download.log", download)
     trace.write("hf_space_download_finished", returncode=download.returncode, workspace=str(workspace))
     return workspace, commands
+
+
+def fetch_space_logs(
+    config: RunConfig,
+    paths: RunPaths,
+    trace: TraceWriter,
+) -> list[CommandResult]:
+    assert config.space_id
+    commands: list[CommandResult] = []
+    fetched: dict[str, int] = {}
+    skipped: dict[str, dict[str, str | int]] = {}
+
+    for kind, extra_args, log_name, cmd_log_name in [
+        ("run", [], "space_run.log", "hf_space_run_logs.log"),
+        ("build", ["--build"], "space_build.log", "hf_space_build_logs.log"),
+    ]:
+        cmd = [
+            "hf",
+            "spaces",
+            "logs",
+            config.space_id,
+            "-n",
+            str(config.space_logs_tail),
+            *extra_args,
+        ]
+        result = run_command(cmd, timeout=60)
+        commands.append(result)
+        write_command_log(paths.logs / cmd_log_name, result)
+        if result.returncode == 0:
+            (paths.logs / log_name).write_text(result.stdout, encoding="utf-8")
+            fetched[kind] = len(result.stdout)
+        else:
+            skipped[kind] = {
+                "returncode": result.returncode,
+                "stderr_excerpt": result.stderr.strip().splitlines()[-1][:200] if result.stderr.strip() else "",
+            }
+
+    if fetched:
+        trace.write("space_logs_fetched", space_id=config.space_id, bytes=fetched)
+    if skipped:
+        trace.write("space_logs_skipped", space_id=config.space_id, reasons=skipped)
+    return commands
 
 
 def write_command_log(path: Path, result: CommandResult) -> None:

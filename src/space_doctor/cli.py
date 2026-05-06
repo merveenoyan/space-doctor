@@ -42,6 +42,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip the default artifact bucket sync (e.g. for offline or test runs).",
     )
+    run.add_argument(
+        "--no-fetch-logs",
+        action="store_true",
+        help="Skip fetching live build/run logs via `hf spaces logs` (default-on for --space-id).",
+    )
     run.add_argument("--trace-dataset", help="HF dataset id for native agent traces.")
     run.add_argument("--agent-session-file", type=Path, help="Native Codex, Claude Code, or Pi session JSONL to copy/upload.")
     run.add_argument("--copy-latest-codex-trace", action="store_true", help="Copy newest ~/.codex/sessions JSONL.")
@@ -75,6 +80,7 @@ def run_command(args: argparse.Namespace) -> int:
             hf_job_flavor=args.hf_job_flavor,
             dry_run_uploads=not args.push,
             dry_run_bucket=args.no_bucket_push,
+            fetch_space_logs=not args.no_fetch_logs,
         )
     )
     print(f"Space Doctor run complete: {result.run_id}")
