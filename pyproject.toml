@@ -1,0 +1,20 @@
+[project]
+name = "space-doctor"
+version = "0.1.0"
+description = "End-to-end HF Space debugging demo for agent traces, buckets, jobs, and PR handoff."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+space-doctor = "space_doctor.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

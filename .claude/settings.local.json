@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(PYTHONPATH=src python3 -m space_doctor.cli run --help)",
+      "Bash(PYTHONPATH=src python3 -m space_doctor.cli run --space-id merve/slimsam --out-dir runs --apply-known-fixes)",
+      "Bash(hf auth *)",
+      "Bash(PYTHONPATH=src python3 -m space_doctor.cli run --space-id merve/slimsam --out-dir runs --apply-known-fixes --create-pr --push)",
+      "Bash(python3 -m json.tool)",
+      "Bash(PYTHONPATH=src python3 -m space_doctor.cli run --space-id merve/slimsam --out-dir runs --apply-known-fixes --artifact-bucket merve/space-doctor-artifacts --trace-dataset merve/space-doctor-traces --copy-latest-codex-trace --push)",
+      "Bash(hf buckets *)",
+      "Bash(curl -sL https://github.com/huggingface/hf-mount/raw/main/install.sh)",
+      "Bash(curl -sL https://raw.githubusercontent.com/huggingface/hf-mount/main/README.md)",
+      "Bash(brew --version)",
+      "Bash(brew install *)",
+      "Bash(hf repos *)",
+      "Bash(PYTHONPATH=/Users/mervenoyan/space-doctor/src python3 *)",
+      "Bash(PYTHONPATH=src python3 -m pytest tests/ -q)",
+      "Bash(python3 -m py_compile /Users/mervenoyan/space-doctor/runs/20260506T132411Z-acca0806/fixed-space/app.py)",
+      "Bash(space-doctor run *)",
+      "Bash(hf upload *)"
+    ]
+  }
+}

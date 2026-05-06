@@ -1,0 +1,6 @@
+gradio
+opencv-python
+pillow
+spaces
+torch
+transformers
