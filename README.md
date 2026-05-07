@@ -84,11 +84,3 @@ PYTHONPATH=src python3 -m space_doctor.cli run \
 
 For Spaces requiring Hub access, pass `HF_TOKEN` to the job as a secret when you
 adapt the generated reproduction script.
-
-## Multimodal Asset Factory
-
-The companion runbook is in `docs/multimodal-asset-factory.md`.
-
-```bash
-PYTHONPATH=src python3 -m space_doctor.cli asset-factory-steps
-```
