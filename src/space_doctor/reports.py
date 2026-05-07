@@ -106,6 +106,22 @@ def write_handoff_prompt(result: DoctorResult, space_id: str | None = None) -> P
         push_block = (
             "5. **Push the fix back to the Space.** If the original target was a Hub Space and the user authorizes pushing, run `hf upload <space_id> <fixed-app.py> app.py --type space` (or `space-doctor run --space-id <space_id> --apply-known-fixes --create-pr --push` for a PR). Execute on user authorization without re-prompting.\n"
         )
+
+    poll_target = space_id or "<space_id>"
+    monitor_block = (
+        "6. **After any push, monitor the Space until it's healthy. This is mandatory — do not ask the user whether to check; just do it.** "
+        f"Poll `hf spaces info {poll_target} --format json` every ~20s until `runtime.stage` is `RUNNING` (success) or `BUILD_ERROR`/`RUNTIME_ERROR` (re-diagnose). "
+        "If `runtime.raw.errorMessage` is populated, surface it. Copy-pasteable loop:\n"
+        "   ```bash\n"
+        "   for i in $(seq 1 30); do\n"
+        f"     stage=$(hf spaces info {poll_target} --format json | python3 -c \"import sys, json; print(json.load(sys.stdin).get('runtime', {{}}).get('stage', 'UNKNOWN'))\")\n"
+        "     echo \"[$(date +%H:%M:%S)] stage=$stage\"\n"
+        "     case \"$stage\" in RUNNING|RUNTIME_ERROR|BUILD_ERROR) break;; esac\n"
+        "     sleep 20\n"
+        "   done\n"
+        "   ```\n"
+    )
+
     text = f"""# Continue This Space Doctor Session
 
 You are taking over a Space debugging run.
@@ -115,6 +131,16 @@ Run ID: {result.run_id}
 Workspace: {result.paths.workspace}
 Artifacts: {result.paths.artifacts}
 Trace JSONL: {result.paths.trace}
+
+## Default Behaviors (Do Not Ask)
+
+These are mandatory parts of the workflow. Never ask the user "should I check the logs?" or "should I poll the Space?" — just do them:
+
+- Fetch and read Space build/run logs to diagnose failures.
+- After any push or rebuild, poll `hf spaces info` until the runtime stage is `RUNNING` or hits a terminal error (`BUILD_ERROR` / `RUNTIME_ERROR`).
+- Read any artifact in the run directory without prompting first.
+
+Asking the user about any of the above is treated as a workflow regression.
 
 ## Current Findings
 
@@ -126,11 +152,11 @@ Trace JSONL: {result.paths.trace}
 2. Inspect `patches/suggested.patch`.
 3. If the patch is appropriate, apply it to the Space source.
 4. Re-run `space-doctor run` with `--local-space-dir` pointing at the fixed source.
-{push_block}6. Upload the native Codex/Claude/Pi JSONL trace to the trace dataset for the Hub viewer.
+{push_block}{monitor_block}7. Upload the native Codex/Claude/Pi JSONL trace to the trace dataset for the Hub viewer.
 
 ## Authorization Notes For The Next Agent
 
-Pushing a fix to the target Space and uploading traces to a Hub dataset are pre-authorized parts of this workflow once the user explicitly asks for them in the resumed conversation. Treat phrases like "push", "ship", "yes do it", "upload it" as the green light — don't stack a second confirmation on top. If the user has not asked, default to dry-run (do not push). The point is: ask once at most, then act.
+Pushing a fix to the target Space and uploading traces to a Hub dataset are pre-authorized parts of this workflow once the user explicitly asks for them in the resumed conversation. Treat phrases like "push", "ship", "yes do it", "upload it" as the green light — don't stack a second confirmation on top. If the user has not asked, default to dry-run (do not push). The point is: ask once at most, then act. Log-checking and post-push polling are never up for confirmation — they are always on (see Default Behaviors above).
 """
     path.write_text(text, encoding="utf-8")
     return path
